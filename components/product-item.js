@@ -1,6 +1,7 @@
 // product-item.js
 
 class ProductItem extends HTMLElement {
+
   constructor() {
     super();
 
@@ -20,7 +21,8 @@ class ProductItem extends HTMLElement {
     // button element
     const button = wrapper.appendChild(document.createElement('button'));
     button.textContent = 'Add to Cart';
-    button.addEventListener('click', this.handleClick);
+    this.eventHandler = this.addToCart.bind(this);
+    button.addEventListener('click', this.eventHandler);
     // CSS styling
     const style = document.createElement('style');
     style.textContent = `
@@ -92,29 +94,92 @@ class ProductItem extends HTMLElement {
   }
 
   connectedCallback() {
-    updateAttributes(this);
+    this.updateAttributes();
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    updateAttributes(this);
+    this.updateAttributes();
   }
-}
 
-function updateAttributes(element) {
+  updateAttributes() {
+    const shadow = this.shadowRoot;
+    // img element
+    const img = shadow.querySelector('img');
+    img.setAttribute('src', this.getAttribute('img'));
+    img.setAttribute('alt', this.getAttribute('data-title'));
+    img.setAttribute('width', 200);
+    // title element
+    const title = shadow.querySelector('.title');
+    title.textContent = this.getAttribute('data-title');
+    // price element
+    const price = shadow.querySelector('.price');
+    price.textContent = this.getAttribute('data-price');
+    // Check local storage
+    let localStorage = window.localStorage;
+    if (!localStorage.getItem('cart')) {
+      this.setCartData(this.id, 0);
+    } else {
+      let cart = JSON.parse(localStorage.getItem('cart'));
+      if (cart[this.id]) {
+        this.addToCart();
+      } else {
+        this.setCartData(this.id, 0);
+      }
+    }
+  }
 
-  const shadow = element.shadowRoot;
+  addToCart() {
+    const shadow = this.shadowRoot;
+    const button = shadow.querySelector('button');
 
-  // img element
-  const img = shadow.querySelector('img');
-  img.setAttribute('src', element.getAttribute('img'));
-  img.setAttribute('alt', element.getAttribute('data-title'));
-  img.setAttribute('width', 200);
-  // title element
-  const title = shadow.querySelector('.title');
-  title.textContent = element.getAttribute('data-title');
-  // price element
-  const price = shadow.querySelector('.price');
-  price.textContent = element.getAttribute('data-price');
+    button.textContent = 'Remove from Cart';
+    document.querySelector('#cart-count').textContent++;
+
+    this.setCartData(this.id, 1);
+
+    button.removeEventListener('click', this.eventHandler);
+    this.eventHandler = this.removeFromCart.bind(this);
+    button.addEventListener('click', this.eventHandler);
+  }
+
+  removeFromCart() {
+    const shadow = this.shadowRoot;
+    const button = shadow.querySelector('button');
+
+    button.textContent = 'Add to Cart';
+    document.querySelector('#cart-count').textContent--;
+
+    this.setCartData(this.id, 0);
+
+    button.removeEventListener('click', this.eventHandler);
+    this.eventHandler = this.addToCart.bind(this);
+    button.addEventListener('click', this.eventHandler);
+  }
+
+  getCartData() {
+    let localStorage = window.localStorage;
+    return localStorage.getItem('cart');
+  }
+
+  setCartData(id, value) {
+    let localStorage = window.localStorage;
+    if (!localStorage.getItem('cart')) {
+      // Initialize and set cart
+      let cart = [];
+      let obj = {};
+      obj[id] = value;
+      cart.push(obj);
+      console.log(cart);
+      window.localStorage.setItem('cart', JSON.stringify(obj));
+    } else {
+      let cart = JSON.parse(localStorage.getItem('cart'));
+      // Fetch and set cart
+      cart[id] = value;
+      window.localStorage.setItem('cart', JSON.stringify(cart));
+    }
+
+  }
+
 }
 
 customElements.define('product-item', ProductItem);
